@@ -24,9 +24,14 @@ from app.schemas.booking import BookingResponse
 from app.utils.email_service import send_booking_confirmation_email, send_new_booking_notification
 
 # --- App Setup ---
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title="Catering Services Booking App")
+
+# --- DATABASE TABLE CREATION ---
+@app.on_event("startup")
+def on_startup():
+    # This creates tables automatically if they don't exist
+    # It runs after the app starts, ensuring the DB connection is ready
+    Base.metadata.create_all(bind=engine)
 
 # -------------------------
 # 1. STRIPE CONFIGURATION
