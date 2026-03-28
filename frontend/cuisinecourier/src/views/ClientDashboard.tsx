@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { 
   Calendar, MapPin, Users, ChevronRight, 
   CheckCircle, Search, X, UtensilsCrossed, 
-  Clock, CreditCard, Home, LogOut, ShoppingBag, Bell, Menu, X as XIcon, AlertCircle, Star, Settings // ADDED Settings
+  Clock, CreditCard, Home, LogOut, ShoppingBag, Bell, Menu, X as XIcon, AlertCircle, Star, Settings
 } from 'lucide-react';
 import type { User } from '../types';
 // --- IMPORT STAR RATING ---
 import StarRating from '../Components/StarRating';
 // --- IMPORT PROFILE SETTINGS ---
-// ADJUST THIS PATH based on where you saved the file!
 import ProfileSettings from '../Components/ProfileSettings'; 
+// --- IMPORT API HELPERS ---
+import { apiGet, apiPost, API_BASE_URL } from '../api';
+
 
 // --- Types ---
 interface Service {
@@ -69,7 +71,6 @@ const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 
 };
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNavigateHome }) => {
-  // CHANGED: Added 'profile' to TabName type
   const [activeView, setActiveView] = useState<'browse' | 'bookings' | 'profile'>('browse');
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,11 +81,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // --- REVIEW STATE ---
   const [reviewingBooking, setReviewingBooking] = useState<Booking | null>(null);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   
-  // --- NEW: VIEW REVIEWS STATE ---
   const [viewingService, setViewingService] = useState<Service | null>(null);
   const [reviewsList, setReviewsList] = useState<any[]>([]);
   
@@ -99,8 +98,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
   });
 
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const API_URL = "http://127.0.0.1:8000";
 
   // --- CHECK STRIPE REDIRECT ON LOAD ---
   useEffect(() => {
@@ -118,45 +115,29 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
   }, []);
 
   const fetchData = async () => {
-    const token = localStorage.getItem("token");
-
+    // Fetch Services
     try {
-      const sRes = await fetch(`${API_URL}/services/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (sRes.ok) {
-        const data = await sRes.json();
-        setServices(data);
-      }
+      const data = await apiGet('/services/');
+      setServices(data);
     } catch (e) {
       console.error("Failed to fetch services", e);
     }
 
+    // Fetch Bookings
     try {
-      const bRes = await fetch(`${API_URL}/bookings/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (bRes.ok) {
-        const data = await bRes.json();
-        setBookings(data);
-      }
+      const data = await apiGet('/bookings/');
+      setBookings(data);
     } catch (e) {
       console.error("Failed to fetch bookings", e);
     }
   };
 
-  // --- NEW: FETCH REVIEWS FUNCTION ---
+  // --- FETCH REVIEWS FUNCTION ---
   const fetchReviewsForService = async (serviceId: number) => {
-    const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`${API_URL}/services/${serviceId}/reviews`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setReviewsList(data);
-        setViewingService(services.find(s => s.id === serviceId) || null);
-      }
+      const data = await apiGet(`/services/${serviceId}/reviews`);
+      setReviewsList(data);
+      setViewingService(services.find(s => s.id === serviceId) || null);
     } catch (err) {
       console.error("Failed to fetch reviews", err);
     }
@@ -187,22 +168,13 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
 
   const initiateStripePayment = async (amount: number, serviceName: string) => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          amount: amount,
-          service_name: serviceName,
-          success_url: `${window.location.origin}/dashboard?payment=success`,
-          cancel_url: `${window.location.origin}/dashboard?payment=cancelled`
-        })
+      const data = await apiPost('/create-checkout-session', {
+        amount: amount,
+        service_name: serviceName,
+        success_url: `${window.location.origin}/dashboard?payment=success`,
+        cancel_url: `${window.location.origin}/dashboard?payment=cancelled`
       });
 
-      const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
       } else {
@@ -229,46 +201,31 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
     if (!selectedService) return;
     
     setIsProcessing(true);
-    const token = localStorage.getItem("token");
     const guestCount = parseInt(formData.guests);
     const totalAmount = selectedService.price_per_person * guestCount;
 
     try {
-      const res = await fetch(`${API_URL}/bookings/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          service_id: selectedService.id,
-          event_date: formData.date,
-          guests: guestCount,
-          payment_method: formData.payment_method,
-          transaction_id: 'PENDING',
-          location: formData.location,
-          notes: formData.notes
-        })
+       await apiPost('/bookings/', {
+        service_id: selectedService.id,
+        event_date: formData.date,
+        guests: guestCount,
+        payment_method: formData.payment_method,
+        transaction_id: 'PENDING',
+        location: formData.location,
+        notes: formData.notes
       });
-
-      const data = await res.json();
       
-      if (res.ok) {
-        if (formData.payment_method === 'stripe') {
-          await initiateStripePayment(totalAmount, selectedService.name);
-        } else {
-          closeBookingModal();
-          setActiveView('bookings');
-          fetchData(); 
-          showToast("Booking request sent successfully!", "success");
-        }
+      if (formData.payment_method === 'stripe') {
+        await initiateStripePayment(totalAmount, selectedService.name);
       } else {
-        showToast(data.detail || "Failed to book", "error");
-        setIsProcessing(false);
+        closeBookingModal();
+        setActiveView('bookings');
+        fetchData(); 
+        showToast("Booking request sent successfully!", "success");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast("Failed to connect to server", "error");
+      showToast(err.message || "Failed to connect to server", "error");
       setIsProcessing(false);
     }
   };
@@ -297,39 +254,23 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
 
   const closeReviewModal = () => setReviewingBooking(null);
 
-  // --- UPDATED: HANDLE REVIEW SUBMIT ---
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewingBooking) return;
 
-    const token = localStorage.getItem("token");
-
     try {
-      const res = await fetch(`${API_URL}/reviews/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          booking_id: reviewingBooking.id,
-          rating: reviewForm.rating,
-          comment: reviewForm.comment
-        })
+      await apiPost('/reviews/', {
+        booking_id: reviewingBooking.id,
+        rating: reviewForm.rating,
+        comment: reviewForm.comment
       });
 
-      if (res.ok) {
-        showToast("Review submitted successfully!", "success");
-        setReviewingBooking(null);
-        // Optional: Refresh bookings if you want to update UI state (like hiding the review button)
-        fetchData(); 
-      } else {
-        const data = await res.json();
-        showToast(data.detail || "Failed to submit review", "error");
-      }
-    } catch (err) {
+      showToast("Review submitted successfully!", "success");
+      setReviewingBooking(null);
+      fetchData(); 
+    } catch (err: any) {
       console.error(err);
-      showToast("Failed to connect to server", "error");
+      showToast(err.message || "Failed to connect to server", "error");
     }
   };
 
@@ -342,7 +283,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
   const getImageUrl = (url: string | undefined): string => {
     if (!url) return `https://picsum.photos/seed/default/400/300`;
     if (url.startsWith('http')) return url;
-    return `${API_URL}/${url}`; 
+    return `${API_BASE_URL}/${url}`; 
   };
 
   return (
@@ -374,7 +315,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
             <div className="space-y-2 flex-1">
               <MobileMenuItem icon={ShoppingBag} label="Browse Services" active={activeView === 'browse'} onClick={() => { setActiveView('browse'); setIsMobileMenuOpen(false); }} />
               <MobileMenuItem icon={Calendar} label="My Bookings" active={activeView === 'bookings'} onClick={() => { setActiveView('bookings'); setIsMobileMenuOpen(false); }} badge={upcomingBookings.length} />
-              {/* ADDED: Mobile Menu Item for Settings */}
               <MobileMenuItem icon={Settings} label="Settings" active={activeView === 'profile'} onClick={() => { setActiveView('profile'); setIsMobileMenuOpen(false); }} />
             </div>
             <div className="border-t border-stone-100 pt-6 mt-4 space-y-2">
@@ -403,7 +343,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
         <nav className="flex-1 overflow-y-auto py-8 px-4 space-y-1">
           <SidebarItem icon={ShoppingBag} label="Browse Services" active={activeView === 'browse'} onClick={() => setActiveView('browse')} />
           <SidebarItem icon={Calendar} label="My Bookings" active={activeView === 'bookings'} onClick={() => setActiveView('bookings')} badge={upcomingBookings.length} />
-          {/* ADDED: Desktop Sidebar Item for Settings */}
           <SidebarItem icon={Settings} label="Settings" active={activeView === 'profile'} onClick={() => setActiveView('profile')} />
         </nav>
         <div className="p-6 border-t border-stone-100 bg-stone-50/50">
@@ -483,14 +422,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
                         <h3 className="font-serif text-2xl font-bold text-stone-900 mb-3 leading-tight">{service.name}</h3>
                         <p className="text-sm text-stone-500 mb-6 line-clamp-2 leading-relaxed font-light">{service.description}</p>
                         
-                        {/* --- VIEW REVIEWS BUTTON --- */}
                         <button 
                             onClick={() => fetchReviewsForService(service.id)}
                             className="mb-6 text-sm font-bold text-stone-500 hover:text-amber-600 transition-colors flex items-center gap-1"
                         >
                             <Star size={16} className="fill-stone-200 text-stone-200" /> View Reviews
                         </button>
-                        {/* --------------------------------- */}
 
                         <button onClick={() => openBookingModal(service)} className="mt-auto w-full py-4 rounded-2xl bg-stone-900 text-white font-bold text-sm hover:bg-amber-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-stone-900/10 active:scale-95">Book Now <ChevronRight size={18} /></button>
                       </div>
@@ -689,7 +626,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onLogout, onNav
               <div className="mb-8">
                 <label className="block text-xs font-bold uppercase text-stone-400 mb-4 tracking-wider">Rating</label>
                 <div className="flex gap-3 justify-center">
-                  {/* --- USING STARRATING COMPONENT --- */}
                   <StarRating 
                     rating={reviewForm.rating} 
                     setRating={(r) => setReviewForm({...reviewForm, rating: r})} 

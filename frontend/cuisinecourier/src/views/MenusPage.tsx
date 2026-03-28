@@ -92,7 +92,7 @@ const MenusPage: React.FC<MenusPageProps> = () => {
   return (
     <div className="min-h-screen bg-brand-white font-sans pb-20">
       {/* Header */}
-      <header className="bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-100 pt-32 pb-16 px-6">
+      <header className="bg-linear-to-br from-yellow-50 via-orange-50 to-yellow-100 pt-32 pb-16 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <span className="text-orange-600 font-bold uppercase tracking-widest text-sm mb-2 block">Culinary Excellence</span>
           <h1 className="text-4xl md:text-6xl font-black text-black mb-4">Our Menus</h1>
@@ -106,7 +106,7 @@ const MenusPage: React.FC<MenusPageProps> = () => {
       <div className="sticky top-24 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="relative flex-grow">
+            <div className="relative grow">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input 
                 type="text"
@@ -156,7 +156,7 @@ const MenusPage: React.FC<MenusPageProps> = () => {
 
       {/* Chef's Special */}
       <section className="max-w-7xl mx-auto px-6 py-16">
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-8 md:p-12 relative overflow-hidden">
+        <div className="bg-linear-to-r from-yellow-400 to-orange-500 rounded-3xl p-8 md:p-12 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
           
@@ -164,7 +164,7 @@ const MenusPage: React.FC<MenusPageProps> = () => {
             <div className="w-64 h-64 rounded-2xl overflow-hidden shadow-xl">
               <img src="/2.png" alt="Chef's Special" className="w-full h-full object-cover" />
             </div>
-            <div className="flex-grow text-center md:text-left">
+            <div className="grow text-center md:text-left">
               <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full text-white font-bold text-sm mb-4">
                 <ChefHat className="w-4 h-4" /> Chef's Special
               </div>

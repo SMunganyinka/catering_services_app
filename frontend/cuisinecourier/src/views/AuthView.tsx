@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-// --- FIX: Renamed 'User' to 'UserIcon' to avoid conflict with the 'User' type ---
 import { Hexagon, User as UserIcon, Lock, ArrowLeft, Loader2, UserPlus, Eye, EyeOff } from 'lucide-react';
 
 // --- 1. IMPORT USER TYPE ---
 import type { User } from '../types';
 
-// --- 2. UPDATE INTERFACE TO USE USER TYPE ---
+// --- 2. IMPORT API_BASE_URL ---
+import { API_BASE_URL } from '../api';
+
+// --- 3. UPDATE INTERFACE TO USE USER TYPE ---
 interface AuthViewProps {
   onAuthSuccess: (user: User) => void; 
   onBack: () => void;
@@ -28,7 +30,8 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, onBack }) => {
     setError(null);
     setIsLoading(true);
 
-    const API_URL = "http://127.0.0.1:8000/auth";
+    // ✅ USE IMPORTED API_BASE_URL
+    const API_URL = `${API_BASE_URL}/auth`;
 
     try {
       const endpoint = isLogin ? "login" : "register";
@@ -68,17 +71,15 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, onBack }) => {
       }
 
       // 5. Handle Success
-      // Backend returns flat object: { access_token, id, name, email, role }
       if (data.access_token) {
-        // Construct the User object expected by App.tsx
         const userPayload: User = {
-          id: String(data.id), // Ensure ID is a string if your type requires it
+          id: String(data.id),
           email: data.email, 
           name: data.name, 
           role: data.role
         };
 
-        // Attach the token to the object so App.tsx can find it
+        // Attach the token so App.tsx can save it to localStorage
         (userPayload as any).access_token = data.access_token;
 
         onAuthSuccess(userPayload);
@@ -126,11 +127,9 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, onBack }) => {
         
         {/* --- LEFT: Brand / Visual Only --- */}
         <div className="hidden md:flex flex-col justify-center p-16 bg-stone-900 text-amber-50 relative overflow-hidden h-full">
-           {/* Background Pattern */}
            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
            
            <div className="relative z-10">
-              {/* Branding Text */}
               <h1 className="font-serif text-5xl font-bold leading-tight mb-6">
                 Where flavor <br/> meets logistics.
               </h1>

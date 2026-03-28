@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Briefcase, Calendar, Plus, Check, DollarSign, 
-  LogOut, Package, Clock, Users as UsersIcon, X, Image as ImageIcon, Edit, Trash2, Settings, Menu // ADDED: Icons for Sidebar
+  LogOut, Package, Clock, Users as UsersIcon, X, Image as ImageIcon, Edit, Trash2, Settings, Menu 
 } from 'lucide-react';
 
 // --- IMPORT PROFILE SETTINGS ---
 import ProfileSettings from '../Components/ProfileSettings'; 
+
+// --- IMPORT API HELPERS ---
+import { apiGet, API_BASE_URL } from '../api';
 
 // --- DEFINED INTERFACE FOR TYPING ---
 interface Service {
@@ -42,22 +45,16 @@ const ProviderDashboard = ({ user, onLogout }: { user: any; onLogout: () => void
   }, [activeView]);
 
   const fetchData = async () => {
-    const token = localStorage.getItem("token");
-    
-    // Fetch Bookings
+    // Fetch Bookings (using apiGet)
     try {
-      const bRes = await fetch('http://127.0.0.1:8000/bookings/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (bRes.ok) setBookings(await bRes.json());
+      const data = await apiGet('/bookings/');
+      setBookings(data);
     } catch (e) { console.error(e); }
 
-    // Fetch Services
+    // Fetch Services (using apiGet)
     try {
-      const sRes = await fetch('http://127.0.0.1:8000/services/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (sRes.ok) setServices(await sRes.json());
+      const data = await apiGet('/services/');
+      setServices(data);
     } catch (e) { console.error(e); }
   };
 
@@ -95,9 +92,10 @@ const ProviderDashboard = ({ user, onLogout }: { user: any; onLogout: () => void
 
   const handleDeleteService = async (id: number) => {
     if (!confirm("Are you sure you want to delete this service?")) return;
+    
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`http://127.0.0.1:8000/services/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/services/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -124,16 +122,20 @@ const ProviderDashboard = ({ user, onLogout }: { user: any; onLogout: () => void
 
     try {
       let res;
+      // Manual fetch is used here because apiPost forces JSON headers, 
+      // which breaks FormData uploads.
+      const headers: Record<string, string> = { 'Authorization': `Bearer ${token}` };
+      
       if (editingService) {
-        res = await fetch(`http://127.0.0.1:8000/services/${editingService.id}`, {
+        res = await fetch(`${API_BASE_URL}/services/${editingService.id}`, {
           method: 'PUT',
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: headers, // Do not set Content-Type for FormData
           body: formData
         });
       } else {
-        res = await fetch('http://127.0.0.1:8000/services/', {
+        res = await fetch(`${API_BASE_URL}/services/`, {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: headers, // Do not set Content-Type for FormData
           body: formData
         });
       }
@@ -150,7 +152,7 @@ const ProviderDashboard = ({ user, onLogout }: { user: any; onLogout: () => void
 
   const handleConfirmBooking = async (id: number) => {
     const token = localStorage.getItem("token");
-    await fetch(`http://127.0.0.1:8000/bookings/${id}/confirm`, {
+    await fetch(`${API_BASE_URL}/bookings/${id}/confirm`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -160,7 +162,7 @@ const ProviderDashboard = ({ user, onLogout }: { user: any; onLogout: () => void
   const getImageUrl = (url: string | undefined): string | undefined => {
     if (!url) return undefined;
     if (url.startsWith('http')) return url;
-    return `http://127.0.0.1:8000/${url}`;
+    return `${API_BASE_URL}/${url}`;
   };
 
   return (

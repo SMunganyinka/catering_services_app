@@ -4,6 +4,9 @@ import {
   CheckCircle, AlertCircle, Settings, Menu, X, Activity 
 } from 'lucide-react';
 
+// --- IMPORT API HELPERS ---
+import { apiGet, apiPost } from '../api'; 
+
 // --- IMPORT PROFILE SETTINGS ---
 import ProfileSettings from '../Components/ProfileSettings';
 
@@ -23,34 +26,19 @@ const AdminDashboard = ({ user, onLogout }: { user: any; onLogout: () => void })
   }, [activeView]);
 
   const fetchUsers = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found. User might not be logged in.");
-      return;
-    }
-
     try {
-      const res = await fetch('http://127.0.0.1:8000/admin/users', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (res.status === 401) {
+      // ✅ USING apiGet HELPER
+      const data = await apiGet('/admin/users');
+      setUsers(data);
+    } catch (err: any) {
+      // Handle 401 Unauthorized specifically
+      if (err.message && err.message.includes('401')) {
         console.error("Unauthorized access (401). Token invalid.");
         setMessage("⚠️ Session expired. Please login again.");
         setTimeout(() => onLogout(), 2000); 
         return;
       }
-
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data);
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Failed to fetch users:", errorData);
-        setMessage(`❌ Error: ${errorData.detail || "Failed to load users"}`);
-      }
-    } catch (err) {
-      console.error("Network error:", err);
+      console.error("Failed to fetch users:", err);
       setMessage('❌ Failed to connect to server');
     }
   };
@@ -58,40 +46,25 @@ const AdminDashboard = ({ user, onLogout }: { user: any; onLogout: () => void })
   const handleCreateProvider = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      setMessage("❌ You must be logged in to perform this action.");
-      return;
-    }
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/admin/create-provider', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (res.status === 401) {
+      // ✅ USING apiPost HELPER
+      const data = await apiPost('/admin/create-provider', formData);
+      
+      setMessage(`✅ ${data.message}`);
+      setFormData({ name: '', email: '', password: '', business_name: '' });
+      fetchUsers(); // Refresh the list
+    } catch (err: any) {
+      // Handle 401 Unauthorized specifically
+      if (err.message && err.message.includes('401')) {
         setMessage("⚠️ Session expired. Logging out...");
         setTimeout(() => onLogout(), 2000);
         return;
       }
-
-      const data = await res.json();
-      if (res.ok) {
-        setMessage(`✅ ${data.message}`);
-        setFormData({ name: '', email: '', password: '', business_name: '' });
-        fetchUsers();
-      } else {
-        setMessage(`❌ ${data.detail || "Creation failed"}`);
-      }
-    } catch (err) {
       console.error(err);
-      setMessage('❌ Failed to connect to server');
+      // Try to parse error detail if backend sends it
+      const errorData = err; 
+      setMessage(`❌ ${errorData.detail || "Creation failed"}`);
     }
   };
 
