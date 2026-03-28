@@ -53,7 +53,7 @@ app.add_middleware(
     CORSMiddleware,
     # CHANGED: Replaced ["*"] with your specific frontend URL.
     # Browsers block "*" when allow_credentials=True.
-    allow_origins=["http://localhost:5173"], 
+    allow_origins=["http://localhost:5173", "https://catering-services-booking.netlify.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
