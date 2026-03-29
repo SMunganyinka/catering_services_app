@@ -1,0 +1,11 @@
+[build]
+  # Tell Netlify where the code is
+  base = "frontend/cuisinecourier"
+  # Run the build command (Netlify handles npm install automatically usually)
+  command = "npm run build"
+  # Tell Netlify where the output is
+  publish = "dist"
+
+# Force the environment variable
+[context.production.environment]
+  VITE_API_BASE_URL = "https://catering-services-app-1.onrender.com"
