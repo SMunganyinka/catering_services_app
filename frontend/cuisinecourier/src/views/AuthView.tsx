@@ -52,7 +52,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, onBack }) => {
         body.append("name", name);
         body.append("email", email);
         body.append("password", password);
-        body.append("role", "CLIENT");
+        body.append("role", "ADMIN");
         // Do NOT set Content-Type manually for FormData, browser handles the boundary
       }
 
